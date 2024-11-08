@@ -1,0 +1,31 @@
+{
+  "name": "json-boundary",
+  "version": "1.0.0",
+  "description": "A simple NPM package to get boundary indexes from JSON string or normal string easily and faster.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/favouritesir/Json-Boundary.git"
+  },
+  "keywords": [
+    "json-boundary",
+    "get-boundary-indexes",
+    "get strat and end indexes",
+    "BracketMatcher"
+  ],
+  "author": "Ashikur Rahman",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/favouritesir/Json-Boundary/issues"
+  },
+  "homepage": "https://github.com/favouritesir/Json-Boundary#readme"
+}
