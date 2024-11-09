@@ -28,12 +28,15 @@ const initSetup: boundarySetupType = {
   },
 };
 
-export default class JsonBoundary {
+export class JsonBoundary {
   private mileStones; // Mile stones tell to start finding boundaries.
   private ignoreCharSet; // Ignore Char inspire to find new mileStone again to start the finding operation.
   private boundaries; // Boundaries tell to find boundaries between these characters.
   private boundarySet; // Set of boundary characters. it just for coding.
 
+  private id = 0;
+  private originalContents: { [keys: string]: string[] } = {};
+  private identifiers: { [keys: string]: string } = {};
   /**
    * Initialize setup with default values if not provided.
         defaultSetup={
@@ -58,16 +61,22 @@ export default class JsonBoundary {
     this.boundarySet = new Set(Object.keys(setUp.boundaries!));
   }
 
+  /**
+   * @param str: string
+   * @returns boundaryIndexes    * 
   /*********************************************************************** Get boundary indexes */
-  getBoundaries(str: string): boudaryType[] {
+  getBoundaries(
+    str: string,
+    callback?: (startIndex: number, currentIndex: number, flag: number) => void
+  ): boudaryType[] {
     const boundaryIndexes: boudaryType[] = [];
 
     let startIndex = 0;
     let captureBoundary = false;
     let identifier: string = "";
-    let ignore = 0;
 
     let i = 0;
+    let flag: number = -1;
 
     while (i < str.length) {
       /********************************************************************** when we found a mileStone */
@@ -78,36 +87,88 @@ export default class JsonBoundary {
       //********************************************************************* boundary capturing start */
       if (captureBoundary) {
         //******************************************************************* if nothing to ignore */
-        if (!ignore && this.boundarySet.has(str[i])) {
-          identifier = str[i];
-          startIndex = i;
-          ignore++;
+        if (flag <= 0) {
+          if (this.boundarySet.has(str[i])) {
+            identifier = str[i];
+            startIndex = i;
+            flag = 1;
+          } else flag = -1;
         }
 
         //******************************************************************* when found ignore case then */
         else {
           //***************************************************************** If a boundary ended */
           if (str[i] == this.boundaries![identifier] && str[i - 1] != "\\") {
-            ignore--;
+            flag--;
           }
 
           //***************************************************************** If new boundary started */
           else if (str[i] == identifier && str[i - 1] != "\\") {
-            ignore++;
+            flag++;
           }
 
           //****************************************************************  When get a Final boundary */
-          if (!ignore) {
+          if (!flag) {
             boundaryIndexes.push({ start: startIndex, end: i });
             captureBoundary = false;
           }
         }
       }
+      if (callback) callback(startIndex, i, flag);
       //******************************************************************** increment index i
       i++;
     }
 
     /*********************************************************************** return the final result */
     return boundaryIndexes;
+  }
+
+  /**
+   * @param str: string, 
+   * @param replacementFormate:string (input:"#{$}" output:"#1" or "#2" or ...)
+   * @returns simple string without boundary contents which replace with a given formate.
+  /*********************************************************************** Get boundary indexes */
+  getSimple(originalStr: string, identifier: string = "###") {
+    const contents: string[] = [];
+    let lastEndPoint = 0;
+    const result: { id: number; str: string; boundaries: boudaryType[] } = {
+      id: this.id++,
+      str: "",
+      boundaries: [],
+    };
+
+    result.boundaries = this.getBoundaries(originalStr, (start, end, flag) => {
+      if (flag != 0) return; // return if boundary is still capturing or not found.
+      /********************************************************************** when boundary ends push the simple string */
+      result.str += `${originalStr.substring(
+        lastEndPoint,
+        start
+      )}${identifier}`;
+
+      /********************************************************************** collect the boundary contents */
+      contents.push(originalStr.substring(start, end + 1));
+      lastEndPoint = end + 1; // update the last end point
+    });
+
+    /********************************************************************** complete the string */
+    result.str += originalStr.substring(lastEndPoint);
+    /********************************************************************** save the content collections */
+    this.originalContents[result.id] = contents;
+    this.identifiers[result.id] = identifier;
+
+    return result;
+  }
+  /**
+   * @param id: number
+   * @returns simple string without boundary contents which replace with a given formate.
+  /***********************************************************************  */
+  replaceOriginal(modifiedStr: string, id: number) {
+    const regex = new RegExp(`${this.identifiers[id]}`, "g");
+    let contentIndex = 0;
+
+    return modifiedStr.replace(
+      regex,
+      (_) => this.originalContents[id][contentIndex++]
+    );
   }
 }
